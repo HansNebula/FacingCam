@@ -91,12 +91,11 @@ public class IKManager : MonoBehaviour
         Vector3 heading=new Vector3(m_base.transform.position.x + posDef_x, m_base.transform.position.y + posDef_y, m_base.transform.position.z + posDef_z);
 
         for(int i=0;i<m_steps;++i){
-                print("ab "+ab);
             if(getDistance(m_end.transform.position, calib) > m_threshold && ab<1){
                 Joint current = m_root;
-                while(current != null){
+                while(current != null && getDistance(m_end.transform.position, calib) > m_threshold){
                     float slope = calculateSlope(current, calib);
-                    current.Rotate(-slope*10f);
+                    current.Rotate(-slope*100f);
                     current = current.GetChild();
                 }
                 ab++;
