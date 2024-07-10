@@ -20,7 +20,8 @@ public class IKManager : MonoBehaviour
 {
     public Joint m_root, m_end;
     public TurnableBase m_base;
-    public GameObject m_target, turnableBase;
+    public grip m_grip;
+    public GameObject m_target, turnableBase, redTarget, blueTarget;
     public float m_threshold = 0.05f;
     public float m_rate = 5f;
     public int m_steps=20;
@@ -123,12 +124,18 @@ public class IKManager : MonoBehaviour
             switch(liftState){
                 case actionSubState.pose_def_: 
                     RobotPosDef();
-                    liftState=actionSubState.turning_;
+                    liftState = actionSubState.turning_;
                     break;
                 case actionSubState.turning_:
-                    turning();
+                    if(turning(m_target.transform.position)){
+                        liftState = actionSubState.heading_;
+                    }
                     break;
-
+                case actionSubState.heading_:
+                    if(headingTo(m_target.transform.position)){;
+                        liftState = actionSubState.lift_;
+                    }
+                    break;
             }
         }
     }
@@ -143,18 +150,37 @@ public class IKManager : MonoBehaviour
 
     }
 
-    public void turning(){
+    public bool turning(Vector3 target){
+        bool reached=false;
+        float baseSlope = calcBaseSlope(m_base, target);
+        for(int i=0;i<m_steps;++i){
+            if(getDistance(m_end.transform.position, target) > m_threshold && baseSlope != 0){
+                Joint current = m_root;
+
+                baseSlope = calcBaseSlope(m_base, target);
+                m_base.Rotate(-baseSlope * m_rate);
+                // reached = false;
+            }
+            // reached = true;
+        }
+        return baseSlope == 0 ? true : false;
+    }
+    
+    float tempSlope;
+    public bool headingTo(Vector3 target){
         for(int i=0;i<m_steps;++i){
             if(getDistance(m_end.transform.position, m_target.transform.position) > m_threshold){
                 Joint current = m_root;
-                
-                float baseSlope = calcBaseSlope(m_base, m_target.transform.position);
-                m_base.Rotate(-baseSlope * m_rate);
+                while(current != null){
+                    float slope = calculateSlope(current, m_target.transform.position);
+                    current.Rotate(-slope*m_rate);
+                    current = current.GetChild();
+                    tempSlope=slope;
+                }
             }
         }
+        return tempSlope == 0 ? true : false;
     }
-
-
 
     public void generalStateButton(){
         if(Input.GetKeyDown(KeyCode.P)){
@@ -166,6 +192,9 @@ public class IKManager : MonoBehaviour
         }
         if(Input.GetKeyDown(KeyCode.D)){
             generalState = robotState.dropping_;
+        }
+        if(Input.GetKeyDown(KeyCode.S)){
+            spontan();
         }
     }
 }
