@@ -8,10 +8,13 @@ public enum robotState{
     dropping_,    
 }
 
-public enum liftSubState{
+public enum actionSubState{
     pose_def_,
-    lifting_,
-    dropping_,    
+    turning_,
+    heading_,
+    gripping_,
+    lift_,
+    loosen_,    
 }
 public class IKManager : MonoBehaviour
 {
@@ -25,6 +28,9 @@ public class IKManager : MonoBehaviour
     public float posDef_x = 3f, posDef_y = 3f, posDef_z=0;
 
     public robotState generalState;
+    public actionSubState liftState;
+
+    public bool isRed, m_robotLifting;
 
     float calculateSlope(Joint joint_, Vector3 heading){
         float deltaTheta = 0.01f;
@@ -54,6 +60,7 @@ public class IKManager : MonoBehaviour
     void Update(){
         // spontan();
         prosedur();
+        generalStateButton();
     }
 
     float getDistance(Vector3 point1_, Vector3 point2_){
@@ -99,7 +106,6 @@ public class IKManager : MonoBehaviour
                     current = current.GetChild();
                 }
                 ab++;
-                print("ab "+ab);
             }else if(getDistance(m_end.transform.position, heading) > m_threshold && ab!=0){
                 Joint current = m_root;
                 while(current != null){
@@ -113,15 +119,53 @@ public class IKManager : MonoBehaviour
     }
 
     public void RobotLifting(){
+        if(m_robotLifting){
+            switch(liftState){
+                case actionSubState.pose_def_: 
+                    RobotPosDef();
+                    liftState=actionSubState.turning_;
+                    break;
+                case actionSubState.turning_:
+                    turning();
+                    break;
 
+            }
+        }
     }
 
     public void RobotDropping(){
 
     }
 
+
+
     public void gripping(){
 
     }
 
+    public void turning(){
+        for(int i=0;i<m_steps;++i){
+            if(getDistance(m_end.transform.position, m_target.transform.position) > m_threshold){
+                Joint current = m_root;
+                
+                float baseSlope = calcBaseSlope(m_base, m_target.transform.position);
+                m_base.Rotate(-baseSlope * m_rate);
+            }
+        }
+    }
+
+
+
+    public void generalStateButton(){
+        if(Input.GetKeyDown(KeyCode.P)){
+            generalState = robotState.pose_def_;
+        }
+        if(Input.GetKeyDown(KeyCode.L)){
+            generalState = robotState.lifting_;
+            m_robotLifting = true;
+        }
+        if(Input.GetKeyDown(KeyCode.D)){
+            generalState = robotState.dropping_;
+        }
+    }
 }
