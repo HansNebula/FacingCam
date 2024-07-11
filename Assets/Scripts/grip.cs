@@ -4,22 +4,25 @@ using UnityEngine;
 
 public class grip : MonoBehaviour
 {
-    public GameObject r_hand, l_hand;
+    public Joint r_hand, l_hand, m_end;
+    public IKManager manager;
     float s;
-    
-    void Update(){
-        if(Input.GetKey(KeyCode.G)){
-            rotate(5f);
-        }
-    }
 
-    public bool rotate(float range){
-        // s=range;
-        if(range!=0){
-            r_hand.transform.Rotate(Vector3.up * -1f);
-            l_hand.transform.Rotate(Vector3.up * -1f);
-            range--;
-        }
-        return range==0 ? true : false;
+    public float calcGripSlope(Joint joint_, Vector3 heading){
+        float deltaTheta = 0.01f;
+        float distance1 = manager.getDistance(m_end.transform.position, heading);
+
+        joint_.Rotate(deltaTheta);
+
+        float distance2 = manager.getDistance(m_end.transform.position, heading);
+        joint_.Rotate(-deltaTheta);
+        return (distance2 - distance1) / deltaTheta;
+    }
+    
+
+    public void Rotate(float range){
+        r_hand.Rotate(range);
+        l_hand.Rotate(range);
+        // return s<=0 ? true : false;
     }
 }
