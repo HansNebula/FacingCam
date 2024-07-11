@@ -55,6 +55,8 @@ public class IKManager : MonoBehaviour
         return (distance2 - distance1) / deltaTheta;
     }
 
+    
+
     void Start(){
         generalState = robotState.pose_def_;
     }
@@ -64,7 +66,7 @@ public class IKManager : MonoBehaviour
         generalStateButton();
     }
 
-    float getDistance(Vector3 point1_, Vector3 point2_){
+    public float getDistance(Vector3 point1_, Vector3 point2_){
         return Vector3.Distance(point1_, point2_);
     }
     //prosedural
@@ -119,7 +121,7 @@ public class IKManager : MonoBehaviour
 
     }
 
-    public float range=5f;
+    public float range=500f;
     public void RobotLifting(){
         if(m_robotLifting){
             switch(liftState){
@@ -140,7 +142,7 @@ public class IKManager : MonoBehaviour
                     }
                     break;
                 case actionSubState.gripping_:
-                    if(m_grip.rotate(range)){
+                    if(gripping(m_target.transform.position)){
                         liftState = actionSubState.lift_;
                     }
                     break;
@@ -153,13 +155,24 @@ public class IKManager : MonoBehaviour
     }
 
 
+    public float gripHandle;
+    public bool gripping(Vector3 target){
+        float gripSlope = m_grip.calcGripSlope(m_grip.l_hand, target);
+        for(int i=0;i<m_steps;++i){
+            if(getDistance(m_grip.l_hand.transform.position, target) > gripHandle ){
+                Joint current = m_root;
 
-    public void gripping(){
-
+                gripSlope = m_grip.calcGripSlope(m_grip.l_hand, target);
+                m_grip.Rotate(-gripSlope * m_rate);
+                Debug.Log(getDistance(m_grip.l_hand.transform.position, target) +"   " + gripSlope);
+            }else{
+                return true;
+            }
+        }
+        return false;
     }
 
     public bool turning(Vector3 target){
-        bool reached=false;
         float baseSlope = calcBaseSlope(m_base, target);
         for(int i=0;i<m_steps;++i){
             if(getDistance(m_end.transform.position, target) > m_threshold && baseSlope != 0){
@@ -167,9 +180,7 @@ public class IKManager : MonoBehaviour
 
                 baseSlope = calcBaseSlope(m_base, target);
                 m_base.Rotate(-baseSlope * m_rate);
-                // reached = false;
             }
-            // reached = true;
         }
         return baseSlope == 0 ? true : false;
     }
@@ -201,6 +212,9 @@ public class IKManager : MonoBehaviour
         }
         if(Input.GetKeyDown(KeyCode.S)){
             spontan();
+        }
+        if(Input.GetKeyDown(KeyCode.G)){
+            gripping(m_target.transform.position);
         }
     }
 }
