@@ -26,7 +26,7 @@ public class IKManager : MonoBehaviour
     public float m_rate = 5f;
     public int m_steps=20;
 
-    public float posDef_x = 3f, posDef_y = 3f, posDef_z=0;
+    public float posDef_x = 3f, posDef_y = 3f, posDef_z=0, thresh_end = -0.025f;
 
     public robotState generalState;
     public actionSubState liftState;
@@ -119,6 +119,7 @@ public class IKManager : MonoBehaviour
 
     }
 
+    public float range=5f;
     public void RobotLifting(){
         if(m_robotLifting){
             switch(liftState){
@@ -133,6 +134,13 @@ public class IKManager : MonoBehaviour
                     break;
                 case actionSubState.heading_:
                     if(headingTo(m_target.transform.position)){;
+                        liftState = actionSubState.gripping_;
+                    }else{
+                        headingTo(m_target.transform.position);
+                    }
+                    break;
+                case actionSubState.gripping_:
+                    if(m_grip.rotate(range)){
                         liftState = actionSubState.lift_;
                     }
                     break;
@@ -166,7 +174,6 @@ public class IKManager : MonoBehaviour
         return baseSlope == 0 ? true : false;
     }
     
-    float tempSlope;
     public bool headingTo(Vector3 target){
         for(int i=0;i<m_steps;++i){
             if(getDistance(m_end.transform.position, m_target.transform.position) > m_threshold){
@@ -175,11 +182,10 @@ public class IKManager : MonoBehaviour
                     float slope = calculateSlope(current, m_target.transform.position);
                     current.Rotate(-slope*m_rate);
                     current = current.GetChild();
-                    tempSlope=slope;
                 }
             }
         }
-        return tempSlope == 0 ? true : false;
+        return getDistance(m_end.transform.position, m_target.transform.position) < m_threshold ? true : false;
     }
 
     public void generalStateButton(){
