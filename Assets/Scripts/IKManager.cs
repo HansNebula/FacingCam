@@ -18,7 +18,10 @@ public enum actionSubState{
 }
 public class IKManager : MonoBehaviour
 {
+    public dbg debug_;
     public Joint m_root, m_end;
+    public Joint[] m_joints=new Joint[5];
+    public float[] joints_param=new float[]{0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
     public TurnableBase m_base;
     public grip m_grip;
     public GameObject m_target, turnableBase, redTarget, blueTarget;
@@ -59,11 +62,13 @@ public class IKManager : MonoBehaviour
 
     void Start(){
         generalState = robotState.pose_def_;
+        getJoints(m_root);
     }
     void Update(){
         // spontan();
         prosedur();
         generalStateButton();
+        forDebug();
     }
 
     public float getDistance(Vector3 point1_, Vector3 point2_){
@@ -87,6 +92,13 @@ public class IKManager : MonoBehaviour
         }
     }
 
+    public void getJoints(Joint curr){
+        for(int i=0;i<m_joints.Length;i++){
+            m_joints[i]=curr;
+            curr=curr.GetChild();
+        }
+    }
+
     public void prosedur(){
         switch(generalState){
             case robotState.pose_def_   : RobotPosDef(); break;
@@ -96,29 +108,17 @@ public class IKManager : MonoBehaviour
     }
 
     int ab=0;
+    
     public void RobotPosDef(){
-        Vector3 calib=new Vector3(m_base.transform.position.x, m_base.transform.position.y + 100f, m_base.transform.position.z);
-        Vector3 heading=new Vector3(m_base.transform.position.x + posDef_x, m_base.transform.position.y + posDef_y, m_base.transform.position.z + posDef_z);
-
-        for(int i=0;i<m_steps;++i){
-            if(getDistance(m_end.transform.position, calib) > m_threshold && ab<1){
-                Joint current = m_root;
-                while(current != null && getDistance(m_end.transform.position, calib) > m_threshold){
-                    float slope = calculateSlope(current, calib);
-                    current.Rotate(-slope*100f);
-                    current = current.GetChild();
-                }
-                ab++;
-            }else if(getDistance(m_end.transform.position, heading) > m_threshold && ab!=0){
-                Joint current = m_root;
-                while(current != null){
-                    float slope = calculateSlope(current, heading);
-                    current.Rotate(-slope*m_rate);
-                    current = current.GetChild();
+        for(int i=0;i<m_joints.Length;i++){
+            if(m_joints[i].transform.rotation.y>= joints_param[i] + 0.01f || m_joints[i].transform.rotation.y <= joints_param[i] - 0.01f){
+                if(m_joints[i].transform.rotation.y>joints_param[i]){
+                    m_joints[i].transform.Rotate(0, -.1f, 0);
+                }else{
+                    m_joints[i].transform.Rotate(0, .1f, 0);
                 }
             }
         }
-
     }
 
     public float range=500f;
@@ -146,6 +146,11 @@ public class IKManager : MonoBehaviour
                         liftState = actionSubState.lift_;
                     }
                     break;
+                case actionSubState.lift_:
+                    if(liftUp()){
+                        
+                    }
+                    break;
             }
         }
     }
@@ -159,7 +164,7 @@ public class IKManager : MonoBehaviour
     public bool gripping(Vector3 target){
         float gripSlope = m_grip.calcGripSlope(m_grip.l_hand, target);
         for(int i=0;i<m_steps;++i){
-            if(getDistance(m_grip.l_hand.transform.position, target) > gripHandle ){
+            if(getDistance(m_grip.l_hand.transform.position, target) > gripHandle && getDistance(m_grip.r_hand.transform.position, target) > gripHandle){
                 Joint current = m_root;
 
                 gripSlope = m_grip.calcGripSlope(m_grip.l_hand, target);
@@ -189,6 +194,7 @@ public class IKManager : MonoBehaviour
         for(int i=0;i<m_steps;++i){
             if(getDistance(m_end.transform.position, m_target.transform.position) > m_threshold){
                 Joint current = m_root;
+                // while(current != null && current!=m_end){
                 while(current != null){
                     float slope = calculateSlope(current, m_target.transform.position);
                     current.Rotate(-slope*m_rate);
@@ -197,6 +203,24 @@ public class IKManager : MonoBehaviour
             }
         }
         return getDistance(m_end.transform.position, m_target.transform.position) < m_threshold ? true : false;
+    }
+
+    public bool liftUp(){
+        Vector3 heading=new Vector3(m_base.transform.position.x + posDef_x, m_base.transform.position.y + posDef_y, m_base.transform.position.z + posDef_z);
+
+        for(int i=0;i<m_steps;++i){
+            if(getDistance(m_end.transform.position, heading) > m_threshold){
+                Joint current = m_root;
+                while(current != null){
+                    float slope = calculateSlope(current, heading);
+                    current.Rotate(-slope*m_rate);
+                    current = current.GetChild();
+                }
+            }else{
+                return true;
+            }
+        }
+        return false;
     }
 
     public void generalStateButton(){
@@ -215,6 +239,12 @@ public class IKManager : MonoBehaviour
         }
         if(Input.GetKeyDown(KeyCode.G)){
             gripping(m_target.transform.position);
+        }
+    }
+
+    public void forDebug(){
+        for(int i = 0;i < m_joints.Length;i++){
+            debug_.jointsParam[i] = m_joints[i].transform.rotation.y;
         }
     }
 }
